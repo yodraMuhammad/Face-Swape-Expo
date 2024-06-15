@@ -1,70 +1,194 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { Button, Image, View, StyleSheet, Dimensions, ScrollView, SafeAreaView, ActivityIndicator, Text, Platform } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
+import axios from 'axios';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+export default function ContohImagePicker() {
+  const [image, setImage] = useState(null);
+  const [imageTarget, setImageTarget] = useState(null);
+  const [swappedImage, setSwappedImage] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
 
-export default function HomeScreen() {
+  const { height: screenHeight } = Dimensions.get('window');
+
+  const pilihGambar = async () => {
+    // let result = await ImagePicker.launchImageLibraryAsync({
+    //   mediaTypes: ImagePicker.MediaTypeOptions.All,
+    //   allowsEditing: true,
+    //   aspect: [4, 3],
+    //   quality: 1,
+    // });
+    const result = await DocumentPicker.getDocumentAsync({
+      type: 'image/*',
+    });
+    console.log(result);
+    if (result) {
+      setImage(result?.assets[0]);
+    }
+  };
+
+  const pilihGambarTarget = async () => {
+    // let result = await ImagePicker.launchImageLibraryAsync({
+    //   mediaTypes: ImagePicker.MediaTypeOptions.All,
+    //   allowsEditing: true,
+    //   aspect: [4, 3],
+    //   quality: 1,
+    // });
+
+    const result = await DocumentPicker.getDocumentAsync({
+      type: 'image/*',
+    });
+    console.log(result);
+    if (result) {
+      setImageTarget(result?.assets[0]);
+    }
+  };
+
+  const tukarWajah = async () => {
+    setLoading(true);
+    const formData = new FormData();
+    formData.append('face_to_swap', image?.file);
+    formData.append('real_image', imageTarget?.file);
+
+    try {
+      const response = await fetch('https://freshpixl-home.el.r.appspot.com/api/swap-image', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      const data = await response.json();
+      setSwappedImage(`data:image/jpeg;base64,${data?.result_image}`);
+    } catch (error) {
+      console.error('Error swapping faces:', error);
+      setError(error);
+    } finally {
+      setLoading(false);
+    }
+
+    // try {
+    //   const response = await axios.post('https://freshpixl-home.el.r.appspot.com/api/swap-image', formData);
+    //   console.log(response.data);
+    //   const data = await response.data;
+    //   setSwappedImage(`data:image/jpeg;base64,${data?.result_image}`);
+    // } catch (error) {
+    //   console.error(error);
+    //   setError(error);
+    // } finally {
+    //   setLoading(false)
+    // }
+  };
+
+  const downloadImage = async () => {
+    if (!swappedImage) return;
+
+    if (Platform.OS === 'web') {
+      const link = document.createElement('a');
+      link.href = swappedImage;
+      link.download = 'swapped_image.jpg';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else {
+      const filename = FileSystem.documentDirectory + 'swapped_image.jpg';
+      try {
+        await FileSystem.writeAsStringAsync(filename, swappedImage.replace(/^data:image\/jpeg;base64,/, ''), {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        alert('Image downloaded to ' + filename);
+      } catch (error) {
+        console.error('Error downloading image:', error);
+      }
+    }
+  };
+
+  const hapusGambar = () => setImage(null);
+  const hapusGambarTarget = () => setImageTarget(null);
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({ ios: 'cmd + d', android: 'cmd + m' })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView contentContainerStyle={styles.scrollView}>
+        <View style={styles.section}>
+          <Button title="Unggah Gambar Sumber" onPress={pilihGambar} />
+          <View style={styles.imageContainer}>
+            {image ? (
+              <Image source={{ uri: image?.uri }} style={styles.image} />
+            ) : (
+              <View style={[styles.image, { borderWidth: 1 }]} />
+            )}
+          </View>
+          <Button title="Hapus Gambar" onPress={hapusGambar} color="red" />
+        </View>
+        <View style={styles.section}>
+          <Button title="Unggah Gambar Target" onPress={pilihGambarTarget} />
+          <View style={styles.imageContainer}>
+            {imageTarget ? (
+              <Image source={{ uri: imageTarget?.uri }} style={styles.image} />
+            ) : (
+              <View style={[styles.image, { borderWidth: 1 }]} />
+            )}
+          </View>
+          <Button title="Hapus Gambar" onPress={hapusGambarTarget} color="red" />
+        </View>
+        <View style={styles.section}>
+          <Button
+            title="Tukar Wajah"
+            onPress={tukarWajah}
+            // disabled={!image || !imageTarget || loading}
+            color="green"
+          />
+          {loading && <ActivityIndicator size="large" color="#0000ff" style={{marginVertical: 10}} />}
+        </View>
+        {swappedImage && (
+          <View style={styles.section}>
+            <Text>Hasil Tukar Wajah:</Text>
+            <Image source={{ uri: swappedImage }} style={styles.image} />
+          </View>
+        )}
+        {error && (
+          <View style={styles.section}>
+            <Text>Error: {error}</Text>
+          </View>
+        )}
+        <View style={styles.section}>
+          <Button
+            title="Download"
+            onPress={downloadImage}
+            // disabled={!image || !imageTarget || loading}
+            color="green"
+          />
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
+  safeArea: {
+    flex: 1,
+    marginTop: 50
+  },
+  scrollView: {
+    flexGrow: 1,
+    padding: 16,
     alignItems: 'center',
-    gap: 8,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  section: {
+    marginBottom: 20,
+    alignItems: 'center',
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  imageContainer: {
+    marginVertical: 10,
+  },
+  image: {
+    width: 200,
+    height: 200,
+    borderRadius: 10,
   },
 });
