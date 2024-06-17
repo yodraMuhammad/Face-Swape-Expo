@@ -113,7 +113,7 @@ export default function ContohImagePicker() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.scrollView}>
+      <ScrollView contentContainerStyle={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
           <Button title="Unggah Gambar Sumber" onPress={pilihGambar} />
           <View style={styles.imageContainer}>
@@ -140,7 +140,7 @@ export default function ContohImagePicker() {
           <Button
             title="Tukar Wajah"
             onPress={tukarWajah}
-            // disabled={!image || !imageTarget || loading}
+            disabled={!image || !imageTarget || loading}
             color="green"
           />
           {loading && <ActivityIndicator size="large" color="#0000ff" style={{marginVertical: 10}} />}
@@ -160,7 +160,7 @@ export default function ContohImagePicker() {
           <Button
             title="Download"
             onPress={downloadImage}
-            // disabled={!image || !imageTarget || loading}
+            disabled={!swappedImage}
             color="green"
           />
         </View>
